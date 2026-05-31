@@ -1,0 +1,35 @@
+{
+    "name": "locker_scan",
+    "short_name": "locker_scan",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#0175C2",
+    "theme_color": "#0175C2",
+    "description": "Cross-platform Flutter application (web, Android, iOS) with an interface that, by scanning a QR code on the door, redirects you to a web server allowing you to access it using credentials (username/password) stored in Firebase Authentication. Once inside, it is going to keep a record of which code was collected from the cabinet and for what purpose.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
