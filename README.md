@@ -1,17 +1,56 @@
-# locker_scan
+# LockerScan — W10
 
-Cross-platform Flutter application (web, Android, iOS) with an interface that, by scanning a QR code on the door, redirects you to a web server allowing you to access it using credentials (username/password) stored in Firebase Authentication. Once inside, it is going to keep a record of which code was collected from the cabinet and for what purpose.
+## Qué hay de nuevo respecto a W9
 
-## Getting Started
+| Fichero | Cambio |
+|---------|--------|
+| `lib/app.dart` | `home:` ahora apunta a `MainScreen()` en vez de `HomeScreen()` |
+| `lib/screens/main_screen.dart` | **NUEVO** — `BottomNavigationBar` con 4 tabs |
+| `lib/screens/home_screen.dart` | `StatelessWidget` → `StatefulWidget` con ciclo de vida completo |
+| Resto de pantallas | Añadido `Logger` y ciclo de vida (`initState`, `dispose`) |
 
-This project is a starting point for a Flutter application.
+## Cómo actualizar en Android Studio
 
-A few resources to get you started if this is your first Flutter project:
+1. Reemplaza **toda la carpeta `lib/`** con la de este ZIP
+2. Reemplaza `pubspec.yaml` (sin cambios esta semana, pero por si acaso)
+3. Terminal → `flutter pub get`
+4. ▶ Run
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Estructura completa
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```
+lib/
+├── main.dart                 # igual que W9
+├── app.dart                  # ← apunta a MainScreen
+├── core/
+│   └── constants.dart        # igual que W9
+├── models/
+│   └── scan_record.dart      # igual que W9
+└── screens/
+    ├── main_screen.dart      # ← NUEVO: BottomNav + IndexedStack
+    ├── home_screen.dart      # ← StatefulWidget + ciclo de vida
+    ├── collection_screen.dart
+    ├── map_screen.dart
+    └── settings_screen.dart
+```
+
+## Conceptos del snippet W10 aplicados
+
+- **BottomNavigationBar** con `type: fixed` (obligatorio con 4+ tabs)
+- **IndexedStack** en lugar de `elementAt()`: mantiene el estado de
+  cada pantalla al cambiar de tab (el scroll no se resetea)
+- **StatefulWidget** completo con `initState`, `didChangeDependencies`,
+  `didUpdateWidget` y `dispose`
+- **Logger** activo en todas las pantallas para ver el ciclo de vida
+  en el panel de debug de Android Studio
+
+## Próxima semana (W11)
+
+Descomenta en `pubspec.yaml`:
+```yaml
+shared_preferences: ^2.2.2
+geolocator: ^11.0.0
+path_provider: ^2.0.9
+fluttertoast: ^8.0.8
+```
+Y ejecuta `flutter pub get`.

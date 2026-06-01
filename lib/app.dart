@@ -1,9 +1,9 @@
 // lib/app.dart
-// ─── W9: Raíz de la aplicación ────────────────────────────────
-// En W10 se sustituirá home: HomeScreen() por MainScreen()
-// con BottomNavigationBar
+// ─── W10: Ahora apunta a MainScreen (BottomNavigationBar) ─────
+// Cambio respecto W9: home: const MainScreen()
+// En W13 se envolverá en StreamBuilder para Firebase Auth
 import 'package:flutter/material.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_screen.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -17,8 +17,9 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
       ),
-      // W10: cambiar a home: const MainScreen()
-      home: const HomeScreen(),
+      // W10: MainScreen gestiona la navegación con BottomNav
+      // W13: cambiar por StreamBuilder<User?> para Firebase Auth
+      home: const MainScreen(),
     );
   }
 }

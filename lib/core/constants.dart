@@ -1,17 +1,13 @@
 // lib/core/constants.dart
-// ─── W9: Constantes globales y enums mejorados ────────────────
-// Demuestra: variables tipadas, enhanced enums (snippet W9)
-
+// ─── W9/W10: Constantes globales y enums ──────────────────────
 class AppConstants {
   static const String appName    = 'LockerScan';
   static const String appVersion = '1.0.0';
   static const int    maxLockers = 100;
 }
 
-// Enhanced enum: cada acción del armario tiene propiedades
-// (mismo patrón que Planet enum del snippet W9)
 enum ScanAction {
-  pick(label: 'Recogida',    icon: '📦', requiresReason: true),
+  pick(label: 'Recogida',     icon: '📦', requiresReason: true),
   returnItem(label: 'Devolución', icon: '↩️', requiresReason: false);
 
   const ScanAction({
@@ -24,10 +20,8 @@ enum ScanAction {
   final String icon;
   final bool   requiresReason;
 
-  // Enhanced enum getter (igual que isGiant en Planet)
   bool get isPickup => this == ScanAction.pick;
 
-  // Factory desde String (útil para leer de base de datos)
   static ScanAction fromString(String value) {
     return ScanAction.values.firstWhere(
       (e) => e.name == value,

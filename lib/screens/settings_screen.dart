@@ -1,6 +1,8 @@
 // lib/screens/settings_screen.dart
-// ─── W11: Aquí irán las SharedPreferences + Logout (W13) ──────
+// ─── W11: SharedPreferences + Logger ──────────────────────────
+// ─── W13: Logout Firebase ─────────────────────────────────────
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -11,10 +13,19 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
 
+  final Logger _logger = Logger();
+
   @override
   void initState() {
     super.initState();
-    // W11: _loadPreferences() con SharedPreferences
+    _logger.d('SettingsScreen · initState');
+    // W11: _loadAllPreferences() con SharedPreferences
+  }
+
+  @override
+  void dispose() {
+    _logger.d('SettingsScreen · dispose');
+    super.dispose();
   }
 
   @override
@@ -25,10 +36,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: const Center(
-        child: Text(
-          'Ajustes de usuario\n(SharedPreferences en W11)\n(Logout Firebase en W13)',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: Colors.grey),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.settings_outlined, size: 48, color: Colors.grey),
+            SizedBox(height: 12),
+            Text(
+              'Preferencias de usuario\nDisponible en W11 con SharedPreferences\n\nLogout Firebase en W13',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
         ),
       ),
     );
