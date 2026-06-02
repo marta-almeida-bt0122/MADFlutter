@@ -1,5 +1,5 @@
 // lib/screens/settings_screen.dart
-// ─── W11: SharedPreferences — read, edit and save ──────────
+// ─── W11: SharedPreferences — leer, editar y guardar ──────────
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logger/logger.dart';
@@ -15,15 +15,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   final Logger _logger = Logger();
 
-  // One controller per SharedPreferences key
+  // Un controller por cada clave de SharedPreferences
   Map<String, TextEditingController> _controllers = {};
   bool _isLoading = true;
 
-  // Default preferences that will always be available
+  // Preferencias por defecto que siempre estarán disponibles
   static const Map<String, String> _defaultPrefs = {
-    'user_name'  : 'User',
+    'user_name'  : 'Usuario',
     'user_email' : '',
-    'server_url' : 'https://my-server.com',
+    'server_url' : 'https://mi-servidor.com',
   };
 
   @override
@@ -35,7 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
-    // Dispose all controllers
+    // Liberar todos los controllers
     for (final c in _controllers.values) {
       c.dispose();
     }
@@ -43,12 +43,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
-  // Load ALL saved preferences
+  // ── Cargar TODAS las preferencias guardadas ───────────────
 
   Future<void> _loadAllPreferences() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Ensure default keys exist
+    // Asegurar que las claves por defecto existen
     for (final entry in _defaultPrefs.entries) {
       if (!prefs.containsKey(entry.key)) {
         await prefs.setString(entry.key, entry.value);
@@ -76,11 +76,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _savePreference(String key, String value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, value);
-    _logger.d('Saved: $key = $value');
+    _logger.d('Guardado: $key = $value');
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Saved: $key'),
+        SnackBar(
+          content: Text('Guardado: $key'),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
@@ -103,8 +103,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(16),
               children: [
 
-                 const Text(
-                   'User preferences',
+                const Text(
+                  'User preferences',
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -112,7 +112,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // One card per preference
+                // Una tarjeta por preferencia
                 ..._controllers.entries.map((entry) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -134,7 +134,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             TextField(
                               controller: entry.value,
                               decoration: InputDecoration(
-                                hintText: 'Enter ${entry.key}',
+                                hintText: 'Introduce ${entry.key}',
                                 border: InputBorder.none,
                                 isDense: true,
                               ),
@@ -166,7 +166,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                // Danger zone (W13: logout will go here)
+                // ── Zona de peligro (W13: aquí irá Logout) ──
                 const Divider(),
                 const SizedBox(height: 8),
                 const Text(
@@ -177,10 +177,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       color: Colors.grey),
                 ),
                 const SizedBox(height: 12),
-                // W13: replace with Firebase logout button
+                // W13: reemplazar con botón de logout Firebase
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.grey),
-                  title: const Text('Sign out',
+                  title: const Text('Log out',
                       style: TextStyle(color: Colors.grey)),
                   subtitle: const Text(
                       'Available in W13 with Firebase Auth',

@@ -1,7 +1,7 @@
 // lib/screens/main_screen.dart
-// ─── W10: NEW - BottomNavigationBar with 4 tabs ──────────────
-// Demonstrates: StatefulWidget, setState, BottomNavigationBar,
-//            organization of widgets in separate files
+// ─── W10: NUEVO - BottomNavigationBar con 4 tabs ──────────────
+// Demuestra: StatefulWidget, setState, BottomNavigationBar,
+//            organización de widgets en ficheros separados
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'collection_screen.dart';
@@ -17,11 +17,11 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
 
-  // Index of the active tab
+  // Active tab index
   int _selectedIndex = 0;
 
-  // List of screens (same order as BottomNav items)
-  // W13: LoginScreen will be added before this widget via StreamBuilder
+  // Lista de pantallas (mismo orden que los items del BottomNav)
+  // W13: LoginScreen se añade antes de este widget via StreamBuilder
   final List<Widget> _screens = [
     const HomeScreen(),
     const CollectionScreen(),
@@ -29,7 +29,7 @@ class _MainScreenState extends State<MainScreen> {
     const SettingsScreen(),
   ];
 
-  // Called each time the user taps a tab
+  // Se llama cada vez que el usuario toca un tab
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
