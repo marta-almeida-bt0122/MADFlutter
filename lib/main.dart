@@ -1,7 +1,7 @@
 // lib/main.dart
-// ─── W9/W10: Punto de entrada ─────────────────────────────────
-// En W13 se añadirá: WidgetsFlutterBinding.ensureInitialized()
-//                    y await Firebase.initializeApp()
+// ─── W9/W10: Entry point ─────────────────────────────────
+// In W13 the following will be added: WidgetsFlutterBinding.ensureInitialized()
+//                    and await Firebase.initializeApp()
 import 'package:flutter/material.dart';
 import 'app.dart';
 

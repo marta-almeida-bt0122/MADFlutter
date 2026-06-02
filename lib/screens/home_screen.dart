@@ -1,12 +1,15 @@
 // lib/screens/home_screen.dart
-// ─── W10: StatefulWidget con ciclo de vida completo ───────────
-// Cambio respecto W9: StatelessWidget → StatefulWidget
-// Demuestra: initState, didChangeDependencies, didUpdateWidget,
-//            dispose, y los métodos del ciclo de vida (W11 snippet)
+// ─── W11: One-off GPS + SharedPreferences + AlertDialog + Toast
+// Change: continuous CSV tracking removed.
+// GPS is only captured when saving a record.
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants.dart';
 import '../models/scan_record.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,198 +22,262 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final Logger _logger = Logger();
 
-  // Estado local de la pantalla
-  String _appInfo = 'Cargando...';
-  bool   _isLoading = true;
+  String  _userName        = 'User';
+  String  _lastPosition    = 'No data yet';
+  bool    _loadingLocation = false;
 
-  // ── Ciclo de vida (snippet W11) ───────────────────────────
+  // ── Ciclo de vida ─────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
     _logger.d('HomeScreen · initState');
-    // Cargar datos al crear el widget (async desde initState)
-    _loadAppInfo();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Se llama después de initState y cuando cambia un
-    // InheritedWidget del que depende esta pantalla
-    _logger.d('HomeScreen · didChangeDependencies');
-  }
-
-  @override
-  void didUpdateWidget(HomeScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Se llama cuando el widget padre se reconstruye
-    _logger.d('HomeScreen · didUpdateWidget');
+    _loadUserName();
+    _showWelcomeToast();
   }
 
   @override
   void dispose() {
-    // Liberar recursos (streams, controllers, timers)
-    // W11: aquí se cancelará _positionStreamSubscription
     _logger.d('HomeScreen · dispose');
     super.dispose();
   }
 
-  // ── Lógica ───────────────────────────────────────────────
+  // ── SharedPreferences ─────────────────────────────────────
 
-  // Async/await: simula carga de datos (W11 vendrá de SharedPrefs)
-  Future<void> _loadAppInfo() async {
-    await Future.delayed(const Duration(milliseconds: 400));
-
-    // Colección Map (snippet W9)
-    final Map<String, String> info = {
-      'App'      : AppConstants.appName,
-      'Versión'  : AppConstants.appVersion,
-      'Armarios' : '${AppConstants.maxLockers} disponibles',
-    };
-
+  Future<void> _loadUserName() async {
+    final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
-        _appInfo  = info.entries.map((e) => '${e.key}: ${e.value}').join('\n');
-        _isLoading = false;
+        _userName = prefs.getString('user_name') ?? 'User';
       });
     }
   }
 
-  // Función recursiva (snippet W9)
-  int fibonacci(int n) {
-    if (n == 0 || n == 1) return n;
-    return fibonacci(n - 1) + fibonacci(n - 2);
+  // ── Toast de bienvenida ───────────────────────────────────
+
+  void _showWelcomeToast() {
+    Fluttertoast.showToast(
+      msg: 'Welcome to LockerScan',
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: Colors.indigo,
+      textColor: Colors.white,
+      fontSize: 14.0,
+    );
   }
 
-  // ── UI ───────────────────────────────────────────────────
+  // ── One-off GPS: capture ONE position on press ───────────
+  // This is the same method used in _saveRecord() (W12/W13)
+  // Only called when the user records an action.
+
+  Future<Position?> _getCurrentPosition() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      _showSnackBar('GPS is disabled on the device');
+      return null;
+    }
+    var permission = await Geolocator.checkPermission();
+       if (permission == LocationPermission.denied) {
+         permission = await Geolocator.requestPermission();
+         if (permission == LocationPermission.denied) {
+           _showSnackBar('Location permission denied');
+        return null;
+      }
+    }
+    if (permission == LocationPermission.deniedForever) {
+      _showSnackBar('Permission permanently denied');
+      return null;
+    }
+    return await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high),
+    );
+  }
+
+  Future<void> _demoGetLocation() async {
+    setState(() => _loadingLocation = true);
+    final pos = await _getCurrentPosition();
+    if (mounted) {
+      setState(() {
+        _loadingLocation = false;
+        _lastPosition = pos != null
+            ? 'Lat: ${pos.latitude.toStringAsFixed(6)}\n'
+              'Lon: ${pos.longitude.toStringAsFixed(6)}'
+            : 'Could not obtain position';
+      });
+    }
+    _logger.d('Position obtained: $pos');
+  }
+
+  // ── AlertDialog de demo ───────────────────────────────────
+
+  Future<void> _showClearDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Demo AlertDialog'),
+        content: const Text('Do you confirm this test action?'),
+        actions: [
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Confirm'),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _showSnackBar('Action confirmed');
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── SnackBar ──────────────────────────────────────────────
+
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // ── UI ────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    _logger.d('HomeScreen · build');
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text(AppConstants.appName),
+        title: Text('Hello, $_userName'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+              _loadUserName();
+            },
+          ),
+        ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            // ── Info de la app ────────────────────────────
+            _SectionCard(
+              title: 'LockerScan',
+              child: const Text(
+                 'Scan your locker QR in the Records tab\n'
+                 'and the GPS will be saved automatically at that moment.',
+                style: TextStyle(fontSize: 14, height: 1.6),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // ── GPS puntual ───────────────────────────────
+            _SectionCard(
+               title: 'My current position (GPS demo)',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
-                  // ── Bienvenida ──────────────────────────
-                  _SectionCard(
-                    title: 'Bienvenido a LockerScan',
-                    child: const Text(
-                      'Escanea el QR de tu armario, autentícate\n'
-                      'y registra qué has recogido y para qué.',
-                      style: TextStyle(fontSize: 14, height: 1.6),
+                  Text(
+                    _lastPosition,
+                    style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                        height: 1.6),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: _loadingLocation
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2))
+                          : const Icon(Icons.gps_fixed, size: 18),
+                       label: const Text('Get position'),
+                      onPressed:
+                          _loadingLocation ? null : _demoGetLocation,
                     ),
                   ),
-                  const SizedBox(height: 16),
-
-                  // ── Info de la app ──────────────────────
-                  _SectionCard(
-                    title: 'Información de la app',
-                    child: Text(
-                      _appInfo,
-                      style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 13,
-                          height: 1.7),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── Acciones disponibles (enum W9) ──────
-                  _SectionCard(
-                    title: 'Tipos de acción',
-                    child: Column(
-                      children: ScanAction.values.map((action) {
-                        return ListTile(
-                          leading: Text(
-                            action.icon,
-                            style: const TextStyle(fontSize: 22),
-                          ),
-                          title: Text(
-                            action.label,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w500),
-                          ),
-                          subtitle: Text(
-                            action.requiresReason
-                                ? 'Requiere motivo'
-                                : 'Sin motivo requerido',
-                          ),
-                          trailing: Icon(
-                            action.isPickup
-                                ? Icons.arrow_downward
-                                : Icons.arrow_upward,
-                            color: action.isPickup
-                                ? Colors.indigo
-                                : Colors.teal,
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── Demo ScanRecord (clase W9) ──────────
-                  _SectionCard(
-                    title: 'Demo modelo ScanRecord',
-                    child: Column(
-                      children: [
-                        ScanRecord(
-                          qrCode: 'LOCKER_42',
-                          reason: 'Proyecto MAD',
-                          action: ScanAction.pick,
-                        ),
-                        ScanRecord(
-                          qrCode: 'LOCKER_07',
-                          reason: '',
-                          action: ScanAction.returnItem,
-                        ),
-                      ].map((r) => ListTile(
-                        dense: true,
-                        leading: Text(r.action.icon,
-                            style: const TextStyle(fontSize: 20)),
-                        title: Text(r.qrCode,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w500)),
-                        subtitle: Text(
-                            '${r.action.label} · ${r.formattedDate}'),
-                      )).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── Fibonacci recursivo (W9) ─────────────
-                  _SectionCard(
-                    title: 'Demo Dart: Fibonacci recursivo',
-                    child: Text(
-                      List.generate(
-                              8, (i) => 'fib($i) = ${fibonacci(i)}')
-                          .join('\n'),
-                      style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 13,
-                          height: 1.7),
-                    ),
-                  ),
-
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+
+            // ── Action types (enum W9) ─────────────────
+            _SectionCard(
+               title: 'Action types',
+              child: Column(
+                children: ScanAction.values.map((action) {
+                  return ListTile(
+                    dense: true,
+                    leading: Text(action.icon,
+                        style: const TextStyle(fontSize: 20)),
+                    title: Text(action.label,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w500)),
+                    subtitle: Text(action.requiresReason
+                        ? 'Requires reason'
+                        : 'No reason required'),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // ── Demo pop-ups ──────────────────────────────
+            _SectionCard(
+              title: 'Demo pop-ups',
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _showClearDialog,
+                    icon: const Icon(Icons.check_circle_outline,
+                        size: 18),
+                    label: const Text('AlertDialog'),
+                  ),
+                  ElevatedButton.icon(
+                     onPressed: () =>
+                         _showSnackBar('This is a SnackBar'),
+                    icon: const Icon(Icons.info_outline, size: 18),
+                    label: const Text('SnackBar'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _showWelcomeToast,
+                    icon: const Icon(Icons.notifications_outlined,
+                        size: 18),
+                    label: const Text('Toast'),
+                  ),
+                ],
+              ),
+            ),
+
+          ],
+        ),
+      ),
     );
   }
 }
 
-// ── Widget auxiliar reutilizable (fichero separado en W11) ─────
 class _SectionCard extends StatelessWidget {
   final String title;
   final Widget child;

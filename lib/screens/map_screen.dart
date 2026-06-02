@@ -1,5 +1,5 @@
 // lib/screens/map_screen.dart
-// ─── W12: Aquí irá el mapa OpenStreetMap con markers ──────────
+// ─── W12: OpenStreetMap with markers will go here ──────────
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 
@@ -31,7 +31,7 @@ class _MapScreenState extends State<MapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mapa de escaneos'),
+        title: const Text('Map of scans'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: const Center(
@@ -41,7 +41,7 @@ class _MapScreenState extends State<MapScreen> {
             Icon(Icons.map_outlined, size: 48, color: Colors.grey),
             SizedBox(height: 12),
             Text(
-              'Mapa OpenStreetMap\nDisponible en W12',
+              'OpenStreetMap\nAvailable in W12',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),

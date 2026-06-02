@@ -1,7 +1,7 @@
 // lib/screens/main_screen.dart
-// ─── W10: NUEVO - BottomNavigationBar con 4 tabs ──────────────
-// Demuestra: StatefulWidget, setState, BottomNavigationBar,
-//            organización de widgets en ficheros separados
+// ─── W10: NEW - BottomNavigationBar with 4 tabs ──────────────
+// Demonstrates: StatefulWidget, setState, BottomNavigationBar,
+//            organization of widgets in separate files
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'collection_screen.dart';
@@ -17,11 +17,11 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
 
-  // Índice de la pestaña activa
+  // Index of the active tab
   int _selectedIndex = 0;
 
-  // Lista de pantallas (mismo orden que los items del BottomNav)
-  // W13: LoginScreen se añade antes de este widget via StreamBuilder
+  // List of screens (same order as BottomNav items)
+  // W13: LoginScreen will be added before this widget via StreamBuilder
   final List<Widget> _screens = [
     const HomeScreen(),
     const CollectionScreen(),
@@ -29,7 +29,7 @@ class _MainScreenState extends State<MainScreen> {
     const SettingsScreen(),
   ];
 
-  // Se llama cada vez que el usuario toca un tab
+  // Called each time the user taps a tab
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -51,22 +51,22 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home),
-            label: 'Inicio',
+            label: 'Home',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.inventory_2_outlined),
             activeIcon: Icon(Icons.inventory_2),
-            label: 'Registros',
+            label: 'Records',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.map_outlined),
             activeIcon: Icon(Icons.map),
-            label: 'Mapa',
+            label: 'Map',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings_outlined),
             activeIcon: Icon(Icons.settings),
-            label: 'Ajustes',
+            label: 'Settings',
           ),
         ],
         currentIndex: _selectedIndex,

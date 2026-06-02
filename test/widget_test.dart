@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:locker_scan/app.dart';
 
 import 'package:locker_scan/main.dart';
 

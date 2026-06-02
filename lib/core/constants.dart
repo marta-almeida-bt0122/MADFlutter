@@ -7,8 +7,8 @@ class AppConstants {
 }
 
 enum ScanAction {
-  pick(label: 'Recogida',     icon: '📦', requiresReason: true),
-  returnItem(label: 'Devolución', icon: '↩️', requiresReason: false);
+  pick(label: 'Pickup',     icon: '📦', requiresReason: true),
+  returnItem(label: 'Return', icon: '↩️', requiresReason: false);
 
   const ScanAction({
     required this.label,
