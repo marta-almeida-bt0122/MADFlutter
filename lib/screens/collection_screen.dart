@@ -1,8 +1,8 @@
 // lib/screens/collection_screen.dart
-// ─── W12: Lista SQFLite con CRUD completo ─────────────────────
-// Tap → diálogo de borrar  |  Long press → diálogo de editar
+// ─── W13: Lista SQFLite + sync con Firebase Realtime DB ───────
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:logger/logger.dart';
 import '../db/database_helper.dart';
 import '../models/scan_record.dart';
@@ -27,14 +27,6 @@ class _CollectionScreenState extends State<CollectionScreen> {
     _loadScans();
   }
 
-  @override
-  void dispose() {
-    _logger.d('CollectionScreen · dispose');
-    super.dispose();
-  }
-
-  // ── Carga ─────────────────────────────────────────────────
-
   Future<void> _loadScans() async {
     final scans = await DatabaseHelper.instance.getAllScans();
     if (mounted) {
@@ -45,122 +37,16 @@ class _CollectionScreenState extends State<CollectionScreen> {
     }
   }
 
-  // ── INSERT: nuevo registro con QR + motivo ────────────────
-
-  Future<void> _showAddDialog() async {
-    final qrController     = TextEditingController(text: 'LOCKER_');
-    final reasonController = TextEditingController();
-    ScanAction selectedAction = ScanAction.pick;
-
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx2, setDialogState) {
-            return AlertDialog(
-              title: const Text('New record'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: qrController,
-                      decoration: const InputDecoration(
-                        labelText: 'QR code',
-                        prefixIcon: Icon(Icons.qr_code),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<ScanAction>(
-                      value: selectedAction,
-                      decoration: const InputDecoration(
-                          labelText: 'Action type'),
-                      items: ScanAction.values
-                          .map((a) => DropdownMenuItem(
-                                value: a,
-                                child: Text(
-                                    '${a.icon}  ${a.label}'),
-                              ))
-                          .toList(),
-                      onChanged: (v) {
-                        if (v != null) {
-                          setDialogState(() => selectedAction = v);
-                        }
-                      },
-                    ),
-                    if (selectedAction.requiresReason) ...[
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: reasonController,
-                        decoration: const InputDecoration(
-                          labelText: 'Reason',
-                          prefixIcon: Icon(Icons.notes),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    Navigator.of(ctx).pop();
-                    await _saveRecord(
-                      qrController.text.trim(),
-                      reasonController.text.trim(),
-                      selectedAction,
-                    );
-                  },
-                  child: const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _saveRecord(
-      String qrCode, String reason, ScanAction action) async {
-    // Get current GPS position
-    Position? pos;
-    try {
-      pos = await Geolocator.getCurrentPosition(
-        locationSettings:
-            const LocationSettings(accuracy: LocationAccuracy.high),
-      );
-    } catch (_) {
-      _logger.w('No se pudo obtener GPS al guardar');
-    }
-
-    final record = ScanRecord(
-      qrCode: qrCode,
-      reason: reason,
-      action: action,
-      latitude:  pos?.latitude,
-      longitude: pos?.longitude,
-    );
-
-    await DatabaseHelper.instance.insertScan(record);
-    // W13: aquí también se guardará en Firebase Realtime DB
-    _loadScans();
-    _showSnackBar('Record saved');
-  }
-
-  // ── DELETE ────────────────────────────────────────────────
+  // ── DELETE local + Firebase ───────────────────────────────
 
   Future<void> _showDeleteDialog(ScanRecord record) async {
     return showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Delete ${record.qrCode}?'),
-        content: Text(
-            '${record.action.label} del ${record.formattedDate}'),
+        content: const Text(
+            'Se eliminará de la base de datos local.\n'
+            'En Firebase quedan los registros históricos.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -181,7 +67,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
     );
   }
 
-  // ── UPDATE ────────────────────────────────────────────────
+  // ── UPDATE local ──────────────────────────────────────────
 
   Future<void> _showUpdateDialog(ScanRecord record) async {
     final controller = TextEditingController(text: record.reason);
@@ -191,8 +77,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
         title: Text('Edit ${record.qrCode}'),
         content: TextField(
           controller: controller,
-          decoration:
-              const InputDecoration(labelText: 'New reason'),
+          decoration: const InputDecoration(labelText: 'Reason'),
           autofocus: true,
         ),
         actions: [
@@ -206,7 +91,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
               await DatabaseHelper.instance
                   .updateScan(record.id!, controller.text.trim());
               _loadScans();
-              _showSnackBar('Record updated');
+              _showSnackBar('Updated');
             },
             child: const Text('Save'),
           ),
@@ -215,14 +100,32 @@ class _CollectionScreenState extends State<CollectionScreen> {
     );
   }
 
+  // ── Ver registros en Firebase ─────────────────────────────
+
+  Future<void> _showFirebaseCount() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final snap = await FirebaseDatabase.instance
+          .ref('scans/${user.uid}')
+          .get();
+      final count = snap.children.length;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Firebase: $count registros en la nube'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    } catch (e) {
+      _logger.w('Error Firebase: $e');
+    }
+  }
+
   void _showSnackBar(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text(msg),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(msg),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2)));
   }
 
   // ── UI ────────────────────────────────────────────────────
@@ -234,6 +137,11 @@ class _CollectionScreenState extends State<CollectionScreen> {
         title: Text('Records (${_scans.length})'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.cloud_outlined),
+            onPressed: _showFirebaseCount,
+            tooltip: 'Check Firebase total',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadScans,
@@ -251,58 +159,84 @@ class _CollectionScreenState extends State<CollectionScreen> {
                           size: 48, color: Colors.grey),
                       SizedBox(height: 12),
                       Text(
-                        'Sin registros.\nPulsa + para añadir uno.',
+                        'No records.\nScan a QR code from Home.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.grey),
                       ),
                     ],
                   ),
                 )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: _scans.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: 4),
-                  itemBuilder: (context, i) {
-                    final scan = _scans[i];
-                    return Card(
-                      elevation: 0,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .surfaceContainerHighest,
-                      child: ListTile(
-                        leading: Text(scan.action.icon,
-                            style: const TextStyle(fontSize: 22)),
-                        title: Text(
-                          scan.qrCode,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w500),
-                        ),
-                        subtitle: Text(
-                          '${scan.action.label}'
-                          '${scan.reason.isNotEmpty ? ' · ${scan.reason}' : ''}'
-                          '\n${scan.formattedDate}',
-                        ),
-                        isThreeLine: true,
-                        trailing: scan.latitude != null
-                            ? const Icon(Icons.location_on,
-                                size: 16,
-                                color: Colors.indigo)
-                            : const Icon(Icons.location_off,
-                                size: 16, color: Colors.grey),
-                        // Tap → confirmar borrado
-                        onTap: () => _showDeleteDialog(scan),
-                        // Long press → edit reason
-                        onLongPress: () => _showUpdateDialog(scan),
+              : Column(
+                  children: [
+                    // Ayuda para el usuario
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      color: Colors.indigo.withOpacity(0.05),
+                      child: const Text(
+                        'Tap → delete  ·  Long press → edit',
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.indigo),
+                        textAlign: TextAlign.center,
                       ),
-                    );
-                  },
+                    ),
+                    Expanded(
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: _scans.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 4),
+                        itemBuilder: (context, i) {
+                          final scan = _scans[i];
+                          return Card(
+                            elevation: 0,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                            child: ListTile(
+                              leading: Text(scan.action.icon,
+                                  style:
+                                      const TextStyle(fontSize: 22)),
+                              title: Text(
+                                scan.qrCode,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500),
+                              ),
+                              subtitle: Text(
+                                '${scan.action.label}'
+                                '${scan.reason.isNotEmpty ? ' · ${scan.reason}' : ''}'
+                                '\n${scan.formattedDate}',
+                              ),
+                              isThreeLine: true,
+                              trailing: Column(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    scan.latitude != null
+                                        ? Icons.location_on
+                                        : Icons.location_off,
+                                    size: 16,
+                                    color: scan.latitude != null
+                                        ? Colors.indigo
+                                        : Colors.grey,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  const Icon(Icons.cloud_done,
+                                      size: 14, color: Colors.green),
+                                ],
+                              ),
+                              onTap: () => _showDeleteDialog(scan),
+                              onLongPress: () =>
+                                  _showUpdateDialog(scan),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
-        tooltip: 'New record',
-        child: const Icon(Icons.add),
-      ),
     );
   }
 }

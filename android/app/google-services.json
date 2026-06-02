@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "263260060360",
+    "firebase_url": "https://lockerscan-3d7cb-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "lockerscan-3d7cb",
+    "storage_bucket": "lockerscan-3d7cb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:263260060360:android:f9f0e83923b93634f683fd",
+        "android_client_info": {
+          "package_name": "com.example.locker_scan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCqYjgPS6uoKsxAYsIrrXzu8pYMpk9o6cc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

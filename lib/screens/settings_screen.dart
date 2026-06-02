@@ -1,7 +1,8 @@
 // lib/screens/settings_screen.dart
-// ─── W11: SharedPreferences — leer, editar y guardar ──────────
+// ─── W13: SharedPreferences + Logout Firebase ─────────────────
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:logger/logger.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -14,12 +15,9 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
 
   final Logger _logger = Logger();
-
-  // Un controller por cada clave de SharedPreferences
   Map<String, TextEditingController> _controllers = {};
   bool _isLoading = true;
 
-  // Preferencias por defecto que siempre estarán disponibles
   static const Map<String, String> _defaultPrefs = {
     'user_name'  : 'Usuario',
     'user_email' : '',
@@ -29,40 +27,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _logger.d('SettingsScreen · initState');
     _loadAllPreferences();
   }
 
   @override
   void dispose() {
-    // Liberar todos los controllers
-    for (final c in _controllers.values) {
-      c.dispose();
-    }
-    _logger.d('SettingsScreen · dispose');
+    for (final c in _controllers.values) c.dispose();
     super.dispose();
   }
 
-  // ── Cargar TODAS las preferencias guardadas ───────────────
-
   Future<void> _loadAllPreferences() async {
     final prefs = await SharedPreferences.getInstance();
-
-    // Asegurar que las claves por defecto existen
     for (final entry in _defaultPrefs.entries) {
       if (!prefs.containsKey(entry.key)) {
         await prefs.setString(entry.key, entry.value);
       }
     }
-
     final keys = prefs.getKeys();
     final Map<String, TextEditingController> controllers = {};
-
     for (final key in keys) {
-      final value = prefs.get(key)?.toString() ?? '';
-      controllers[key] = TextEditingController(text: value);
+      controllers[key] =
+          TextEditingController(text: prefs.get(key)?.toString() ?? '');
     }
-
     if (mounted) {
       setState(() {
         _controllers = controllers;
@@ -71,27 +57,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ── Save a preference ───────────────────────────────
-
   Future<void> _savePreference(String key, String value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, value);
-    _logger.d('Guardado: $key = $value');
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Guardado: $key'),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
+            content: Text('Guardado: $key'),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2)),
       );
     }
+  }
+
+  // ── Logout ────────────────────────────────────────────────
+
+  Future<void> _showLogoutDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Log out'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await _signOut();
+            },
+            child: const Text('Log out'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _signOut() async {
+    await FirebaseAuth.instance.signOut();
+    _logger.d('Usuario desconectado');
+    // app.dart StreamBuilder redirige automáticamente a LoginScreen
   }
 
   // ── UI ────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
@@ -103,16 +120,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(16),
               children: [
 
-                const Text(
-                  'User preferences',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey),
+                // ── Cuenta Firebase ──────────────────────
+                Card(
+                  elevation: 1,
+                  child: ListTile(
+                    leading: const Icon(Icons.account_circle,
+                        color: Colors.indigo, size: 36),
+                    title: Text(
+                      _controllers['user_name']?.text.isNotEmpty == true
+                          ? _controllers['user_name']!.text
+                          : 'Usuario',
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    subtitle: Text(user?.email ?? '—',
+                        style: const TextStyle(fontSize: 12)),
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
-                // Una tarjeta por preferencia
+                // ── Preferencias ─────────────────────────
+                const Text('Preferences',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey)),
+                const SizedBox(height: 8),
+
                 ..._controllers.entries.map((entry) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -124,7 +157,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              entry.key.replaceAll('_', ' ').toUpperCase(),
+                              entry.key
+                                  .replaceAll('_', ' ')
+                                  .toUpperCase(),
                               style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w500,
@@ -134,12 +169,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             TextField(
                               controller: entry.value,
                               decoration: InputDecoration(
-                                hintText: 'Introduce ${entry.key}',
+                                hintText: entry.key,
                                 border: InputBorder.none,
                                 isDense: true,
                               ),
-                              onSubmitted: (value) =>
-                                  _savePreference(entry.key, value),
+                              onSubmitted: (v) =>
+                                  _savePreference(entry.key, v),
                             ),
                           ],
                         ),
@@ -148,48 +183,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   );
                 }),
 
-                const SizedBox(height: 8),
-
-                // Save all at once
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.save_outlined),
                     label: const Text('Save all settings'),
                     onPressed: () async {
-                      for (final entry in _controllers.entries) {
-                        await _savePreference(entry.key, entry.value.text);
+                      for (final e in _controllers.entries) {
+                        await _savePreference(e.key, e.value.text);
                       }
                     },
                   ),
                 ),
 
                 const SizedBox(height: 24),
-
-                // ── Zona de peligro (W13: aquí irá Logout) ──
                 const Divider(),
                 const SizedBox(height: 8),
-                const Text(
-                  'Account',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey),
-                ),
-                const SizedBox(height: 12),
-                // W13: reemplazar con botón de logout Firebase
-                ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.grey),
-                  title: const Text('Log out',
-                      style: TextStyle(color: Colors.grey)),
-                  subtitle: const Text(
-                      'Available in W13 with Firebase Auth',
-                      style: TextStyle(fontSize: 12)),
-                  shape: RoundedRectangleBorder(
-                    side: const BorderSide(color: Colors.black12),
-                    borderRadius: BorderRadius.circular(8),
+
+                // ── Logout ───────────────────────────────
+                const Text('Account',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey)),
+                const SizedBox(height: 8),
+
+                Card(
+                  elevation: 1,
+                  child: ListTile(
+                    leading: const Icon(Icons.logout, color: Colors.red),
+                    title: const Text('Log out',
+                        style: TextStyle(color: Colors.red)),
+                    subtitle: Text(user?.email ?? '',
+                        style: const TextStyle(fontSize: 12)),
+                    onTap: _showLogoutDialog,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
-                  onTap: null,
                 ),
               ],
             ),
