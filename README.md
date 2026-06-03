@@ -3,8 +3,8 @@
 ## Workspace
 
 Github:
-- Repository: https://github.com/marta-almeida-bt0122/locker_scan
-- Releases: https://github.com/marta-almeida-bt0122/locker_scan/releases
+- Repository: https://github.com/marta-almeida-bt0122/MADFlutter
+- Releases: https://github.com/marta-almeida-bt0122/MADFlutter/releases
 
 Workspace: https://upm365.sharepoint.com/sites/MobileAppDevelopment41
 
