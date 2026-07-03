@@ -1,12 +1,35 @@
 // lib/app.dart
-// ─── W13: StreamBuilder para estado de autenticación Firebase ─
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/main_screen.dart';
 import 'screens/login_screen.dart';
 
-class MyApp extends StatelessWidget {
+/// Holds a locker ID parsed from ?locker= in the web URL on startup.
+/// HomeScreen reads and clears this once the user is authenticated.
+class PendingLocker {
+  static String? value;
+}
+
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Capture ?locker= from the URL before anything renders.
+    if (kIsWeb) {
+      final param = Uri.base.queryParameters['locker'];
+      if (param != null && param.isNotEmpty) {
+        PendingLocker.value = param;
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,23 +40,17 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
       ),
-      // StreamBuilder listens to auth state changes in real time:
-      // - Si hay usuario → MainScreen (con BottomNav)
-      // - Si no hay usuario → LoginScreen
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
-          // Esperando conexión con Firebase
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           }
-          // Usuario autenticado
           if (snapshot.data != null) {
             return const MainScreen();
           }
-          // No session → login screen
           return const LoginScreen();
         },
       ),

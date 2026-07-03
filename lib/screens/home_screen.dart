@@ -1,6 +1,5 @@
 // lib/screens/home_screen.dart
-// ─── W13: QR Scanner + Firebase ───────────────────────────────
-// El GPS se captura SOLO en _saveRecord(), al registrar la acción.
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:geolocator/geolocator.dart';
@@ -9,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../app.dart' show PendingLocker;
 import '../core/constants.dart';
 import '../models/scan_record.dart';
 import '../db/database_helper.dart';
@@ -31,6 +31,14 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadUserName();
     _showWelcomeToast();
+    // Consume a pending locker from the web URL (?locker=XXX after login).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final locker = PendingLocker.value;
+      if (locker != null && mounted) {
+        PendingLocker.value = null;
+        _showAddRecordDialog(locker);
+      }
+    });
   }
 
   @override
@@ -68,11 +76,24 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(builder: (_) => const _QrScannerScreen()),
     );
     if (result != null && result.isNotEmpty) {
-      _showAddRecordDialog(result);
+      _showAddRecordDialog(_extractLockerCode(result));
     }
   }
 
-  // ── Diálogo para guardar registro tras escanear ───────────
+  /// Tries to parse [raw] as a URL and extract the 'locker' query param.
+  /// Falls back to [raw] itself for legacy plain-text QR codes.
+  String _extractLockerCode(String raw) {
+    try {
+      final uri = Uri.parse(raw);
+      if (uri.hasScheme && uri.queryParameters.containsKey('locker')) {
+        final code = uri.queryParameters['locker']!;
+        if (code.isNotEmpty) return code;
+      }
+    } catch (_) {}
+    return raw;
+  }
+
+  // ── Diálogo para guardar registro ─────────────────────────
 
   Future<void> _showAddRecordDialog(String qrCode) async {
     final reasonController = TextEditingController();
@@ -84,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return StatefulBuilder(
           builder: (ctx2, setDialogState) {
             return AlertDialog(
-              title: Text('Escaneado: $qrCode'),
+              title: Text('Locker: $qrCode'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -144,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _saveRecord(
       String qrCode, String reason, ScanAction action) async {
 
-    // One-shot GPS: a single position is captured at record time
+    // GPS capture — gracefully degraded when unavailable or denied.
     Position? pos;
     try {
       pos = await Geolocator.getCurrentPosition(
@@ -152,7 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
             accuracy: LocationAccuracy.high),
       );
     } catch (e) {
-      _logger.w('GPS no disponible al guardar: $e');
+      _logger.w('GPS unavailable: $e');
     }
 
     final record = ScanRecord(
@@ -163,11 +184,18 @@ class _HomeScreenState extends State<HomeScreen> {
       longitude: pos?.longitude,
     );
 
-    // 1. Save locally in SQFLite
-    await DatabaseHelper.instance.insertScan(record);
+    // 1. Local SQFLite — skipped on web (sqflite not supported there).
+    if (!kIsWeb) {
+      try {
+        await DatabaseHelper.instance.insertScan(record);
+      } catch (e) {
+        _logger.w('Local DB error: $e');
+      }
+    }
 
-    // 2. Save to Firebase Realtime Database
+    // 2. Firebase Realtime Database.
     final user = FirebaseAuth.instance.currentUser;
+    bool cloudSaved = false;
     if (user != null) {
       try {
         await FirebaseDatabase.instance
@@ -175,12 +203,20 @@ class _HomeScreenState extends State<HomeScreen> {
             .push()
             .set(record.toMap()..remove('id'));
         _logger.d('Saved to Firebase');
+        cloudSaved = true;
       } catch (e) {
-        _logger.w('Error Firebase: $e');
+        _logger.w('Firebase error: $e');
       }
     }
 
-    _showSnackBar('✓ Record saved');
+    if (cloudSaved) {
+      _showSnackBar('✓ Record saved');
+    } else if (kIsWeb) {
+      // On web there is no local fallback, so warn the user.
+      _showSnackBar('⚠ No connection — record not saved');
+    } else {
+      _showSnackBar('✓ Saved locally (sync pending)');
+    }
   }
 
   void _showSnackBar(String msg) {
@@ -217,7 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
 
-            // ── Botón principal: escanear QR ─────────────
+            // ── Scan button ──────────────────────────────
             SizedBox(
               height: 56,
               child: ElevatedButton.icon(
@@ -233,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 16),
 
-            // ── Explicación del flujo ─────────────────────
+            // ── How does it work? ─────────────────────────
             Card(
               elevation: 1,
               child: Padding(
@@ -247,7 +283,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontSize: 15)),
                     SizedBox(height: 10),
                     _StepRow(icon: Icons.qr_code,
-                        text: 'Scan the locker QR code'),
+                        text: 'Scan the locker QR code or open the locker link'),
                     _StepRow(icon: Icons.edit_note,
                         text: 'Select pickup or return'),
                     _StepRow(icon: Icons.gps_fixed,
@@ -260,7 +296,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 16),
 
-            // ── Firebase session info ──────────────────────
+            // ── Active session card ───────────────────────
             Card(
               elevation: 1,
               child: ListTile(
@@ -283,7 +319,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ── Widget auxiliar para los pasos ────────────────────────────
+// ── Step row widget ───────────────────────────────────────────
 class _StepRow extends StatelessWidget {
   final IconData icon;
   final String text;
@@ -305,7 +341,7 @@ class _StepRow extends StatelessWidget {
   }
 }
 
-// ── Pantalla del escáner QR ───────────────────────────────────
+// ── QR scanner screen ─────────────────────────────────────────
 class _QrScannerScreen extends StatefulWidget {
   const _QrScannerScreen();
 
@@ -327,6 +363,39 @@ class _QrScannerScreenState extends State<_QrScannerScreen> {
       body: Stack(
         children: [
           MobileScanner(
+            errorBuilder: (context, error, child) {
+              final isPermissionDenied =
+                  error.errorCode == MobileScannerErrorCode.permissionDenied;
+              return Container(
+                color: Colors.black,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isPermissionDenied
+                              ? Icons.no_photography_outlined
+                              : Icons.error_outline,
+                          size: 64,
+                          color: Colors.white54,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          isPermissionDenied
+                              ? 'Camera permission denied.\nGrant permission in Settings and try again.'
+                              : 'Camera error: ${error.errorDetails?.message ?? error.errorCode.name}',
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 15),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
             onDetect: (capture) {
               if (_scanned) return;
               final barcode = capture.barcodes.firstOrNull;

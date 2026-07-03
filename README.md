@@ -14,6 +14,8 @@ LockerScan is a Flutter-based mobile application designed to manage locker acces
 
 Compared to existing locker management systems — which are typically web-only, require physical key cards, or rely on manual paper logs — LockerScan offers a fully mobile, contactless experience. Unlike generic inventory apps such as Sortly or MyStuff2, LockerScan is specifically designed for locker access control with GPS-based location tracking and cloud synchronization per user account.
 
+The app is also available as a hosted web app at **https://lockerscan-3d7cb.web.app** — physical QR codes on lockers encode a URL that opens the web app directly on the record dialog.
+
 ## Screenshots and navigation
 
 | Home | Records | Map | Settings |
@@ -29,6 +31,7 @@ https://upm365-my.sharepoint.com/:v:/g/personal/marta_almeida_alumnos_upm_es/IQA
 
 **Functional features:**
 - Scan a QR code attached to a locker door to identify it
+- Open the locker URL from any phone camera to go straight to the record dialog (no app install needed)
 - Register a pickup or return action with an optional reason
 - View the full history of locker interactions in a list
 - Visualize all scan locations on an interactive map
@@ -38,8 +41,9 @@ https://upm365-my.sharepoint.com/:v:/g/personal/marta_almeida_alumnos_upm_es/IQA
 **Technical features:**
 - Persistence in shared preferences — user name and app settings. Ref: `lib/screens/settings_screen.dart`
 - Persistence in SQFLite local database — full CRUD on scan records. Ref: `lib/db/database_helper.dart`
-- Firebase Realtime Database — cloud sync of records per authenticated user. Ref: `lib/screens/home_screen.dart`
+- Firebase Realtime Database — cloud sync of records per authenticated user; used as primary storage on web. Ref: `lib/screens/home_screen.dart`
 - Firebase Authentication — email and password login/logout. Ref: `lib/screens/login_screen.dart`
+- Firebase Hosting — web app served as SPA at https://lockerscan-3d7cb.web.app. Ref: `firebase.json`
 - Maps: OpenStreetMap via flutter_map — markers loaded from local database. Ref: `lib/screens/map_screen.dart`
 - QR Scanner: mobile_scanner package — cross-platform camera-based QR reading. Ref: `lib/screens/home_screen.dart`
 - Sensors: GPS coordinates captured at the moment of each scan via Geolocator. Ref: `lib/models/scan_record.dart`
@@ -55,6 +59,42 @@ https://upm365-my.sharepoint.com/:v:/g/personal/marta_almeida_alumnos_upm_es/IQA
 6. Go to the **Records** tab to see your full history. Tap a record to delete it or long-press to edit the reason
 7. Go to the **Map** tab to see where each scan took place
 8. Go to **Settings** to update your preferences or log out
+
+Alternatively, scan a physical locker QR code with any phone camera — it opens the web app at `https://lockerscan-3d7cb.web.app/?locker=A12` and goes straight to the record dialog after login.
+
+## QR code URL flow
+
+Physical QR codes on lockers encode a URL like:
+
+```
+https://lockerscan-3d7cb.web.app/?locker=A12
+```
+
+Scanning it with any camera app opens the web app directly on the record dialog — no app install needed. If the user is not logged in yet, the locker ID is saved and the dialog opens automatically after login.
+
+The Android app scanner handles both formats: full URLs (extracts the `locker` param) and plain codes (legacy QRs used as-is).
+
+## Deploy to Firebase Hosting
+
+```bash
+# 1. Build the web release
+flutter build web --release
+
+# 2. Deploy (firebase-tools must be installed and logged in)
+firebase deploy --only hosting
+```
+
+## Edge cases
+
+| Scenario | Behaviour |
+|---|---|
+| No user logged in when URL opened | Locker ID saved in `PendingLocker`; dialog shown automatically after login |
+| Camera permission denied | Scanner shows an error message with instructions; no crash |
+| GPS unavailable / denied | Record saved without coordinates; no crash |
+| No internet on Android | Saved to local SQLite; snackbar says "Saved locally (sync pending)" |
+| No internet on web | Firebase save fails; snackbar warns "No connection — record not saved" |
+| QR encodes plain text (legacy) | `_extractLockerCode` falls back to raw value |
+| QR encodes full URL | `locker` query param extracted automatically |
 
 ## Participants
 

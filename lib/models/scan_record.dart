@@ -1,9 +1,10 @@
 // lib/models/scan_record.dart
-// ─── W9/W10: Modelo de datos ───────────────────────────────────
 import '../core/constants.dart';
 
 class ScanRecord {
   final int?       id;
+  /// Firebase Realtime DB push key — set on web reads, null on native.
+  final String?    firebaseKey;
   final String     qrCode;
   final String     reason;
   final ScanAction action;
@@ -13,6 +14,7 @@ class ScanRecord {
 
   ScanRecord({
     this.id,
+    this.firebaseKey,
     required this.qrCode,
     required this.reason,
     required this.action,
@@ -29,6 +31,7 @@ class ScanRecord {
 
   String _pad(int n) => n.toString().padLeft(2, '0');
 
+  // firebaseKey is derived from the node key, not stored in the value.
   Map<String, dynamic> toMap() => {
     if (id != null) 'id': id,
     'qr_code'  : qrCode,
@@ -49,6 +52,19 @@ class ScanRecord {
     latitude  : map['latitude']  as double?,
     longitude : map['longitude'] as double?,
   );
+
+  /// Returns a copy of this record with [firebaseKey] set.
+  /// Used by DatabaseHelper after reading a Firebase snapshot.
+  ScanRecord withFirebaseKey(String? key) => ScanRecord(
+        id: id,
+        firebaseKey: key,
+        qrCode: qrCode,
+        reason: reason,
+        action: action,
+        timestamp: timestamp,
+        latitude: latitude,
+        longitude: longitude,
+      );
 
   @override
   String toString() =>

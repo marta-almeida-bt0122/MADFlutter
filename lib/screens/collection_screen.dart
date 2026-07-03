@@ -56,7 +56,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () async {
               Navigator.of(ctx).pop();
-              await DatabaseHelper.instance.deleteScan(record.id!);
+              await DatabaseHelper.instance.deleteScan(record);
               _loadScans();
               _showSnackBar('Record deleted');
             },
@@ -89,7 +89,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
             onPressed: () async {
               Navigator.of(ctx).pop();
               await DatabaseHelper.instance
-                  .updateScan(record.id!, controller.text.trim());
+                  .updateScan(record, controller.text.trim());
               _loadScans();
               _showSnackBar('Updated');
             },
@@ -228,8 +228,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                                 ],
                               ),
                               onTap: () => _showDeleteDialog(scan),
-                              onLongPress: () =>
-                                  _showUpdateDialog(scan),
+                              onLongPress: () => _showUpdateDialog(scan),
                             ),
                           );
                         },
