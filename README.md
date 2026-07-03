@@ -74,7 +74,7 @@ The Android app scanner handles both formats: full URLs (extracts the `locker` p
 
 The actual QR linked to Locker A12 is this one:
 
-![QR](img/locker_A12.png)
+![QR del locker A12](img/locker_A12.png)
 
 ## Deploy to Firebase Hosting
 
