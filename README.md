@@ -6,8 +6,6 @@ Github:
 - Repository: https://github.com/marta-almeida-bt0122/MADFlutter
 - Releases: https://github.com/marta-almeida-bt0122/MADFlutter/releases
 
-Workspace: https://upm365.sharepoint.com/sites/MobileAppDevelopment41
-
 ## Description
 
 LockerScan is a Flutter-based mobile application designed to manage locker access through QR code scanning. Users authenticate with their credentials, scan the QR code attached to a locker door, and register whether they are picking up or returning an item, along with the reason for the action. Each record is stored locally on the device and synchronized in real time to the cloud via Firebase, making the history accessible from any device.
@@ -75,7 +73,8 @@ Scanning it with any camera app opens the web app directly on the record dialog 
 The Android app scanner handles both formats: full URLs (extracts the `locker` param) and plain codes (legacy QRs used as-is).
 
 The actual QR linked to Locker A12 is this one:
-img/locker_A12.png
+
+![QR](img/locker_A12.png)
 
 ## Deploy to Firebase Hosting
 
