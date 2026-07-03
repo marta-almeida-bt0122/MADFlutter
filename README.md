@@ -25,7 +25,7 @@ The app is also available as a hosted web app at **https://lockerscan-3d7cb.web.
 
 ## Demo Video
 
-https://upm365-my.sharepoint.com/:v:/g/personal/marta_almeida_alumnos_upm_es/IQAmlC_NPg8CTrWTahcByvfxAWp9thq4b7Q6vtXjMi_GvN4?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=5RWpSJ
+https://vimeo.com/1206695776?fl=ip&fe=ec
 
 ## Features
 
@@ -73,6 +73,9 @@ https://lockerscan-3d7cb.web.app/?locker=A12
 Scanning it with any camera app opens the web app directly on the record dialog — no app install needed. If the user is not logged in yet, the locker ID is saved and the dialog opens automatically after login.
 
 The Android app scanner handles both formats: full URLs (extracts the `locker` param) and plain codes (legacy QRs used as-is).
+
+The actual QR linked to Locker A12 is this one:
+img/locker_A12.png
 
 ## Deploy to Firebase Hosting
 
