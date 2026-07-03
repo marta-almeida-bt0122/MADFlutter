@@ -76,16 +76,6 @@ The actual QR linked to Locker A12 is this one:
 
 ![QR del locker A12](img/locker_A12.png)
 
-## Deploy to Firebase Hosting
-
-```bash
-# 1. Build the web release
-flutter build web --release
-
-# 2. Deploy (firebase-tools must be installed and logged in)
-firebase deploy --only hosting
-```
-
 ## Edge cases
 
 | Scenario | Behaviour |
