@@ -21,9 +21,9 @@ The app is also available as a hosted web app at **https://lockerscan-3d7cb.web.
 | ![Home](img/screenshot_home.png) | ![Records](img/screenshot_records.png) | ![Map](img/screenshot_map.png) | ![Settings](img/screenshot_settings.png) |
 
 
-## Demo Video
+## Video
 
-https://vimeo.com/1206695776?fl=ip&fe=ec
+https://vimeo.com/1206867549?share=copy&fl=sv&fe=ci
 
 ## Features
 
